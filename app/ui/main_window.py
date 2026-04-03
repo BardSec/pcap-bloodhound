@@ -1,7 +1,9 @@
 import json
 import os
+import sys
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QDesktopServices, QPixmap
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -109,6 +111,39 @@ class MainWindow(QMainWindow):
         self.capture_list.currentRowChanged.connect(self._on_capture_selected)
         sidebar_layout.addWidget(self.capture_list, 1)
 
+        # Footer with logo and copyright
+        footer = QWidget()
+        footer.setStyleSheet(f"background-color: {COLORS['bg_card']}; border-top: 1px solid {COLORS['border']};")
+        footer_layout = QVBoxLayout(footer)
+        footer_layout.setContentsMargins(12, 10, 12, 10)
+        footer_layout.setSpacing(4)
+        footer_layout.setAlignment(Qt.AlignCenter)
+
+        # Logo — small and subtle
+        logo_label = QLabel()
+        logo_path = self._resource_path("app/resources/logo.png")
+        if os.path.exists(logo_path):
+            pixmap = QPixmap(logo_path)
+            logo_label.setPixmap(pixmap.scaledToHeight(32, Qt.SmoothTransformation))
+        logo_label.setAlignment(Qt.AlignCenter)
+        logo_label.setStyleSheet("border: none;")
+        footer_layout.addWidget(logo_label)
+
+        # Website link
+        link = QLabel(f'<a href="https://bardsec.com" style="color: {COLORS["text_muted"]}; font-size: 10px; text-decoration: none;">bardsec.com</a>')
+        link.setAlignment(Qt.AlignCenter)
+        link.setOpenExternalLinks(True)
+        link.setStyleSheet("border: none;")
+        footer_layout.addWidget(link)
+
+        # Copyright
+        copyright_label = QLabel("\u00a9 2026 BardSec. All rights reserved.")
+        copyright_label.setAlignment(Qt.AlignCenter)
+        copyright_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 9px; border: none; opacity: 0.6;")
+        footer_layout.addWidget(copyright_label)
+
+        sidebar_layout.addWidget(footer)
+
         splitter.addWidget(sidebar)
 
         # Main content
@@ -194,3 +229,12 @@ class MainWindow(QMainWindow):
     def _on_capture_selected(self, row: int):
         if 0 <= row < len(self.captures):
             self.dashboard.show_results(self.captures[row])
+
+    @staticmethod
+    def _resource_path(relative_path: str) -> str:
+        """Get absolute path to resource, works for dev and PyInstaller."""
+        if getattr(sys, "frozen", False):
+            base = sys._MEIPASS
+        else:
+            base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        return os.path.join(base, relative_path)

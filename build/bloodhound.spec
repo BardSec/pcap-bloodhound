@@ -10,7 +10,7 @@ a = Analysis(
     ['../app/main.py'],
     pathex=['..'],
     binaries=[],
-    datas=[],
+    datas=[('../app/resources/logo.png', 'app/resources')],
     hiddenimports=[
         'scapy.all',
         'scapy.layers.inet',
