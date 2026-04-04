@@ -22,6 +22,7 @@ from app.ui.panels.exfil import ExfilPanel
 from app.ui.panels.ntlm import NtlmPanel
 from app.ui.panels.tls_inspect import TlsInspectPanel
 from app.ui.panels.traffic_timeline import TrafficTimelinePanel
+from app.ui.panels.generic import GenericDictPanel
 from app.ui.theme import COLORS
 
 
@@ -101,8 +102,8 @@ class Dashboard(QWidget):
         # Clear and rebuild tabs
         self.tabs.clear()
 
-        # Threat hunting tabs
-        panels = [
+        # Custom panels (have charts or special layouts)
+        custom_panels = [
             ("C2 Beaconing", "c2_beaconing", C2BeaconPanel, True),
             ("DNS Tunneling", "dns_tunneling", DnsTunnelPanel, False),
             ("NTLM Hashes", "ntlm", NtlmPanel, True),
@@ -114,11 +115,33 @@ class Dashboard(QWidget):
             ("Traffic Timeline", "traffic_timeline", TrafficTimelinePanel, False),
         ]
 
-        for label, attr, panel_class, is_list in panels:
+        # Generic panels (cards + tables auto-layout)
+        generic_panels = [
+            ("Lateral Movement", "lateral_movement", "No lateral movement detected."),
+            ("DGA Detection", "dga_detection", "No DGA domains detected."),
+            ("Data Staging", "data_staging", "No data staging patterns detected."),
+            ("User-Agents", "suspicious_useragents", "No suspicious user agents detected."),
+            ("PS/WMI", "powershell_wmi", "No PowerShell/WMI network activity detected."),
+            ("Filter Bypass", "content_filter_bypass", "No content filter bypass attempts detected."),
+            ("CIPA Compliance", "cipa_compliance", "No web traffic to analyze for CIPA compliance."),
+            ("VLAN Traffic", "vlan_traffic", "No VLAN-tagged traffic detected."),
+            ("DHCP", "dhcp", "No DHCP traffic detected."),
+            ("Broadcast/Multicast", "broadcast_storms", "No broadcast storm indicators."),
+            ("Services", "services", "No network services detected."),
+        ]
+
+        for label, attr, panel_class, is_list in custom_panels:
             panel = panel_class()
             data = getattr(result, attr, [] if is_list else {})
             panel.load(data)
+            count = result.finding_count(attr)
+            tab_label = f"{label} ({count})" if count > 0 else label
+            self.tabs.addTab(panel, tab_label)
 
+        for label, attr, empty_msg in generic_panels:
+            panel = GenericDictPanel(empty_message=empty_msg)
+            data = getattr(result, attr, {})
+            panel.load(data)
             count = result.finding_count(attr)
             tab_label = f"{label} ({count})" if count > 0 else label
             self.tabs.addTab(panel, tab_label)

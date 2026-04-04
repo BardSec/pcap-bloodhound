@@ -23,11 +23,26 @@ class CaptureResult:
     cleartext_creds: list[dict[str, Any]] = field(default_factory=list)
     exfiltration: list[dict[str, Any]] = field(default_factory=list)
 
-    # Troubleshooting results
+    # Additional threat hunting
+    lateral_movement: dict[str, Any] = field(default_factory=dict)
+    dga_detection: dict[str, Any] = field(default_factory=dict)
+    data_staging: dict[str, Any] = field(default_factory=dict)
+    suspicious_useragents: dict[str, Any] = field(default_factory=dict)
+    powershell_wmi: dict[str, Any] = field(default_factory=dict)
+
+    # K-12 specific
+    content_filter_bypass: dict[str, Any] = field(default_factory=dict)
+    cipa_compliance: dict[str, Any] = field(default_factory=dict)
+
+    # Network visibility
     connection_failures: dict[str, Any] = field(default_factory=dict)
     dns_health: dict[str, Any] = field(default_factory=dict)
     tls_inspection: dict[str, Any] = field(default_factory=dict)
     traffic_timeline: dict[str, Any] = field(default_factory=dict)
+    vlan_traffic: dict[str, Any] = field(default_factory=dict)
+    dhcp: dict[str, Any] = field(default_factory=dict)
+    broadcast_storms: dict[str, Any] = field(default_factory=dict)
+    services: dict[str, Any] = field(default_factory=dict)
 
     def finding_count(self, analyzer: str) -> int:
         """Return the number of findings for a given analyzer."""
@@ -59,10 +74,25 @@ class CaptureResult:
                 "cleartext_credentials": self.cleartext_creds,
                 "exfiltration": self.exfiltration,
             },
-            "network_troubleshooting": {
+            "additional_threat_hunting": {
+                "lateral_movement": self.lateral_movement,
+                "dga_detection": self.dga_detection,
+                "data_staging": self.data_staging,
+                "suspicious_useragents": self.suspicious_useragents,
+                "powershell_wmi": self.powershell_wmi,
+            },
+            "k12_specific": {
+                "content_filter_bypass": self.content_filter_bypass,
+                "cipa_compliance": self.cipa_compliance,
+            },
+            "network_visibility": {
                 "connection_failures": self.connection_failures,
                 "dns_health": self.dns_health,
                 "tls_inspection": self.tls_inspection,
                 "traffic_timeline": self.traffic_timeline,
+                "vlan_traffic": self.vlan_traffic,
+                "dhcp": self.dhcp,
+                "broadcast_storms": self.broadcast_storms,
+                "services": self.services,
             },
         }

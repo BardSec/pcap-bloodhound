@@ -18,21 +18,46 @@ from app.analyzers import (
     analyze_ntlm,
     analyze_tls_inspection,
     analyze_traffic_timeline,
+    analyze_content_filter_bypass,
+    analyze_cipa_compliance,
+    analyze_vlan_traffic,
+    analyze_dhcp,
+    analyze_broadcast_storms,
+    analyze_services,
+    analyze_lateral_movement,
+    analyze_dga,
+    analyze_data_staging,
+    analyze_suspicious_useragents,
+    analyze_powershell_wmi,
 )
 
 logger = logging.getLogger(__name__)
 
 ANALYZER_NAMES = [
     ("Loading packets", None),
+    # Threat hunting
     ("C2 Beaconing", "c2_beaconing"),
     ("DNS Tunneling", "dns_tunneling"),
     ("NTLM Hashes", "ntlm"),
     ("Cleartext Credentials", "cleartext_creds"),
     ("Exfiltration", "exfiltration"),
+    ("Lateral Movement", "lateral_movement"),
+    ("DGA Detection", "dga_detection"),
+    ("Data Staging", "data_staging"),
+    ("Suspicious User-Agents", "suspicious_useragents"),
+    ("PowerShell/WMI", "powershell_wmi"),
+    # K-12
+    ("Content Filter Bypass", "content_filter_bypass"),
+    ("CIPA Compliance", "cipa_compliance"),
+    # Network visibility
     ("Connection Failures", "connection_failures"),
     ("DNS Health", "dns_health"),
     ("TLS/SSL Inspection", "tls_inspection"),
     ("Traffic Timeline", "traffic_timeline"),
+    ("VLAN Traffic", "vlan_traffic"),
+    ("DHCP Analysis", "dhcp"),
+    ("Broadcast Storms", "broadcast_storms"),
+    ("Service Discovery", "services"),
 ]
 
 
@@ -76,10 +101,21 @@ class AnalysisWorker(QThread):
                 "ntlm": analyze_ntlm,
                 "cleartext_creds": analyze_cleartext_credentials,
                 "exfiltration": analyze_exfiltration,
+                "lateral_movement": analyze_lateral_movement,
+                "dga_detection": analyze_dga,
+                "data_staging": analyze_data_staging,
+                "suspicious_useragents": analyze_suspicious_useragents,
+                "powershell_wmi": analyze_powershell_wmi,
+                "content_filter_bypass": analyze_content_filter_bypass,
+                "cipa_compliance": analyze_cipa_compliance,
                 "connection_failures": analyze_connection_failures,
                 "dns_health": analyze_dns_health,
                 "tls_inspection": analyze_tls_inspection,
                 "traffic_timeline": analyze_traffic_timeline,
+                "vlan_traffic": analyze_vlan_traffic,
+                "dhcp": analyze_dhcp,
+                "broadcast_storms": analyze_broadcast_storms,
+                "services": analyze_services,
             }
 
             for i, (display_name, attr_name) in enumerate(ANALYZER_NAMES):
