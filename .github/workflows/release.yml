@@ -22,15 +22,66 @@ jobs:
       - name: Build .app bundle
         run: pyinstaller build/bloodhound.spec --distpath dist --workpath build/output --noconfirm
 
-      - name: Create ZIP
-        working-directory: dist
-        run: zip -r "PCAP-Bloodhound-macOS.zip" "PCAP Bloodhound.app"
+      - name: Import signing certificate
+        if: env.APPLE_CERTIFICATE_BASE64 != ''
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          CERT_FILE=$(mktemp /tmp/cert.XXXXXX.p12)
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$CERT_FILE"
+          KEYCHAIN="build.keychain"
+          security create-keychain -p "" "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          security import "$CERT_FILE" -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN"
+          rm -f "$CERT_FILE"
+
+      - name: Code sign .app bundle
+        if: env.APPLE_CERTIFICATE_BASE64 != ''
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          IDENTITY="Developer ID Application: BardSec ($APPLE_TEAM_ID)"
+          # Sign all nested frameworks and dylibs first
+          find "dist/PCAP Bloodhound.app" -name "*.dylib" -o -name "*.so" -o -name "*.framework" | while read f; do
+            codesign --force --options runtime --entitlements build/entitlements.plist --sign "$IDENTITY" "$f" 2>/dev/null || true
+          done
+          # Sign the main executable
+          codesign --force --options runtime --entitlements build/entitlements.plist --sign "$IDENTITY" "dist/PCAP Bloodhound.app/Contents/MacOS/PCAP Bloodhound"
+          # Sign the app bundle
+          codesign --force --deep --options runtime --entitlements build/entitlements.plist --sign "$IDENTITY" "dist/PCAP Bloodhound.app"
+          # Verify
+          codesign -dv --verbose "dist/PCAP Bloodhound.app"
+
+      - name: Create DMG
+        run: |
+          hdiutil create -volname "PCAP Bloodhound" \
+            -srcfolder "dist/PCAP Bloodhound.app" \
+            -ov -format UDZO \
+            "dist/PCAP-Bloodhound-macOS.dmg"
+
+      - name: Notarize DMG
+        if: env.APPLE_ID != ''
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit "dist/PCAP-Bloodhound-macOS.dmg" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple "dist/PCAP-Bloodhound-macOS.dmg"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: PCAP-Bloodhound-macOS
-          path: dist/PCAP-Bloodhound-macOS.zip
+          path: dist/PCAP-Bloodhound-macOS.dmg
 
   build-windows:
     runs-on: windows-latest
@@ -79,5 +130,5 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            PCAP-Bloodhound-macOS.zip
+            PCAP-Bloodhound-macOS.dmg
             PCAP-Bloodhound-Windows.zip

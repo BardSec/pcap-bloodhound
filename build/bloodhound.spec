@@ -62,12 +62,15 @@ if sys.platform == 'darwin':
     app = BUNDLE(
         coll,
         name='PCAP Bloodhound.app',
-        icon=None,
+        icon='build/icon.icns',
         bundle_identifier='com.bardsec.pcap-bloodhound',
         info_plist={
             'CFBundleName': 'PCAP Bloodhound',
             'CFBundleDisplayName': 'PCAP Bloodhound',
-            'CFBundleShortVersionString': '1.0.0',
+            'CFBundleShortVersionString': '1.4.0',
             'NSHighResolutionCapable': True,
+            'LSMinimumSystemVersion': '12.0',
+            'NSHumanReadableCopyright': 'Copyright © 2026 BardSec',
+            'LSApplicationCategoryType': 'public.app-category.utilities',
         },
     )
