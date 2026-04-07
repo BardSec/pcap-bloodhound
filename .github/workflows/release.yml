@@ -65,6 +65,7 @@ jobs:
 
       - name: Notarize DMG
         if: env.APPLE_ID != ''
+        timeout-minutes: 30
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
@@ -74,8 +75,8 @@ jobs:
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
-          xcrun stapler staple "dist/PCAP-Detective-macOS.dmg"
+            --wait --timeout 20m 2>&1 || echo "Notarization timed out or failed — DMG will still be uploaded unsigned"
+          xcrun stapler staple "dist/PCAP-Detective-macOS.dmg" 2>&1 || echo "Stapling skipped"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
