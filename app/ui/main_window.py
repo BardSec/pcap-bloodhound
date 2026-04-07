@@ -23,6 +23,7 @@ from app.analysis.models import CaptureResult
 from app.analysis.runner import AnalysisWorker
 from app.ui.capture_dialog import CaptureDialog
 from app.ui.dashboard import Dashboard
+from app.ui.settings_dialog import SettingsDialog
 from app.ui.theme import COLORS
 
 
@@ -103,6 +104,23 @@ class MainWindow(QMainWindow):
         capture_btn.clicked.connect(self._start_live_capture)
         sidebar_layout.addWidget(capture_btn)
 
+        # Settings button
+        settings_btn = QPushButton("Industry Packs")
+        settings_btn.setStyleSheet(f"""
+            QPushButton {{
+                margin: 0 12px 12px 12px;
+                padding: 10px;
+                background-color: transparent;
+                border: 1px solid {COLORS['border']};
+                border-radius: 6px;
+                font-weight: 600;
+                color: {COLORS['text']};
+            }}
+            QPushButton:hover {{ background-color: {COLORS['bg_card']}; }}
+        """)
+        settings_btn.clicked.connect(self._open_settings)
+        sidebar_layout.addWidget(settings_btn)
+
         # Progress bar
         self.progress_label = QLabel("")
         self.progress_label.setStyleSheet(f"color: {COLORS['text_muted']}; padding: 0 12px; font-size: 11px;")
@@ -172,6 +190,25 @@ class MainWindow(QMainWindow):
         splitter.setStretchFactor(1, 1)
 
         layout.addWidget(splitter)
+
+    def _open_settings(self):
+        dialog = SettingsDialog(parent=self)
+        dialog.exec()
+        if dialog.changed and self.captures:
+            reply = QMessageBox.question(
+                self,
+                "Settings Changed",
+                "Industry packs changed. Re-analyze the current capture?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            if reply == QMessageBox.Yes:
+                idx = self.capture_list.currentRow()
+                if 0 <= idx < len(self.captures):
+                    cap = self.captures[idx]
+                    self._start_analysis(cap.file_path)
+        elif dialog.changed:
+            # No capture loaded, just refresh dashboard if visible
+            pass
 
     def _open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(

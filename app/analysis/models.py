@@ -34,6 +34,18 @@ class CaptureResult:
     content_filter_bypass: dict[str, Any] = field(default_factory=dict)
     cipa_compliance: dict[str, Any] = field(default_factory=dict)
 
+    # Financial Services
+    pci_compliance: dict[str, Any] = field(default_factory=dict)
+    financial_protocols: dict[str, Any] = field(default_factory=dict)
+
+    # Healthcare
+    hipaa_compliance: dict[str, Any] = field(default_factory=dict)
+    medical_devices: dict[str, Any] = field(default_factory=dict)
+
+    # Energy / Utilities
+    ics_scada: dict[str, Any] = field(default_factory=dict)
+    it_ot_segmentation: dict[str, Any] = field(default_factory=dict)
+
     # Network visibility
     connection_failures: dict[str, Any] = field(default_factory=dict)
     dns_health: dict[str, Any] = field(default_factory=dict)
@@ -84,6 +96,18 @@ class CaptureResult:
             "k12_specific": {
                 "content_filter_bypass": self.content_filter_bypass,
                 "cipa_compliance": self.cipa_compliance,
+            },
+            "financial_services": {
+                "pci_compliance": self.pci_compliance,
+                "financial_protocols": self.financial_protocols,
+            },
+            "healthcare": {
+                "hipaa_compliance": self.hipaa_compliance,
+                "medical_devices": self.medical_devices,
+            },
+            "energy_utilities": {
+                "ics_scada": self.ics_scada,
+                "it_ot_segmentation": self.it_ot_segmentation,
             },
             "network_visibility": {
                 "connection_failures": self.connection_failures,

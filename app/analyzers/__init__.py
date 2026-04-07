@@ -18,6 +18,12 @@ from app.analyzers.dga_detection import analyze_dga
 from app.analyzers.data_staging import analyze_data_staging
 from app.analyzers.suspicious_useragent import analyze_suspicious_useragents
 from app.analyzers.powershell_wmi import analyze_powershell_wmi
+from app.analyzers.pci_compliance import analyze_pci_compliance
+from app.analyzers.financial_protocols import analyze_financial_protocols
+from app.analyzers.hipaa_compliance import analyze_hipaa_compliance
+from app.analyzers.medical_devices import analyze_medical_devices
+from app.analyzers.ics_scada import analyze_ics_scada
+from app.analyzers.it_ot_segmentation import analyze_it_ot_segmentation
 
 __all__ = [
     "analyze_c2_beaconing",
@@ -40,4 +46,10 @@ __all__ = [
     "analyze_data_staging",
     "analyze_suspicious_useragents",
     "analyze_powershell_wmi",
+    "analyze_pci_compliance",
+    "analyze_financial_protocols",
+    "analyze_hipaa_compliance",
+    "analyze_medical_devices",
+    "analyze_ics_scada",
+    "analyze_it_ot_segmentation",
 ]

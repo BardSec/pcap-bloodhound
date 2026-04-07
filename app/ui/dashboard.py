@@ -29,6 +29,7 @@ from app.ui.panels.traffic_timeline import TrafficTimelinePanel
 from app.ui.panels.generic import GenericDictPanel
 from app.ui.panels.base import make_card, make_card_row, make_description_banner, make_section_header
 from app.ui.theme import COLORS
+from app.settings import load_settings, INDUSTRY_PACKS
 
 # Each entry: (label, attr, PanelClass, is_list, description) for custom panels
 #             (label, attr, None, empty_message, description) for generic panels
@@ -75,6 +76,7 @@ ANALYZER_CATEGORIES = [
     },
     {
         "name": "K-12 Specific",
+        "pack": "k12",
         "analyzers": [
             ("Filter Bypass", "content_filter_bypass", None, "No content filter bypass attempts detected.",
              "Identifies attempts to circumvent content filters using VPN/proxy services (NordVPN, Psiphon, Ultrasurf), "
@@ -82,6 +84,42 @@ ANALYZER_CATEGORIES = [
             ("CIPA Compliance", "cipa_compliance", None, "No web traffic to analyze for CIPA compliance.",
              "Checks whether outbound web traffic passes through a recognized content filter (Lightspeed, GoGuardian, Securly, Cisco Umbrella, etc.). "
              "Unfiltered HTTPS connections from student devices may indicate a CIPA compliance gap."),
+        ],
+    },
+    {
+        "name": "Financial Services",
+        "pack": "financial",
+        "analyzers": [
+            ("PCI DSS Compliance", "pci_compliance", None, "No PCI DSS compliance issues detected.",
+             "Scans cleartext packet payloads for credit card Primary Account Numbers (PANs) validated with the Luhn algorithm. "
+             "Flags unencrypted connections to payment processing ports. Any PAN in cleartext is a PCI DSS violation."),
+            ("Financial Protocols", "financial_protocols", None, "No financial protocol traffic detected.",
+             "Detects FIX protocol (trading), Bloomberg terminal, and SWIFT messaging traffic. "
+             "Flags unencrypted financial protocol usage that could expose sensitive transaction data."),
+        ],
+    },
+    {
+        "name": "Healthcare",
+        "pack": "healthcare",
+        "analyzers": [
+            ("HIPAA Compliance", "hipaa_compliance", None, "No HIPAA compliance issues detected.",
+             "Scans cleartext payloads for Protected Health Information patterns — SSNs, dates of birth, and Medical Record Numbers. "
+             "Flags unencrypted HL7 (port 2575) and DICOM (port 104) traffic. PHI values are masked in all output."),
+            ("Medical Devices", "medical_devices", None, "No medical device traffic detected.",
+             "Identifies medical devices by detecting HL7v2 message segments, DICOM imaging associations, and Ethernet MAC "
+             "addresses from known medical device manufacturers (GE, Philips, Siemens, Medtronic, etc.)."),
+        ],
+    },
+    {
+        "name": "Energy / Utilities",
+        "pack": "energy",
+        "analyzers": [
+            ("ICS/SCADA Protocols", "ics_scada", None, "No ICS/SCADA protocol traffic detected.",
+             "Detects industrial control system protocols: Modbus TCP (502), DNP3 (20000), OPC UA (4840), "
+             "EtherNet/IP (44818), BACnet (47808), IEC 61850 MMS, and IEC 60870-5-104. Inventories all ICS protocol flows."),
+            ("IT/OT Segmentation", "it_ot_segmentation", None, "No IT/OT segmentation issues detected.",
+             "Classifies hosts as IT or OT based on protocol usage, then identifies boundary crossings between the two zones. "
+             "Flags OT hosts with outbound internet access — a critical risk in industrial environments."),
         ],
     },
     {
@@ -124,13 +162,14 @@ class OverviewPanel(QScrollArea):
         self.setWidgetResizable(True)
         self.setFrameShape(QScrollArea.NoFrame)
 
-    def load(self, result: CaptureResult):
+    def load(self, result: CaptureResult, active_categories: list[dict] | None = None):
+        categories = active_categories if active_categories is not None else ANALYZER_CATEGORIES
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(16, 8, 16, 16)
         layout.setSpacing(16)
 
-        for category in ANALYZER_CATEGORIES:
+        for category in categories:
             layout.addWidget(make_section_header(category["name"]))
 
             cards = []
@@ -289,14 +328,22 @@ class Dashboard(QWidget):
             w.deleteLater()
         self._nav_to_stack.clear()
 
+        # Filter categories by enabled industry packs
+        settings = load_settings()
+        enabled_packs = set(settings.get("enabled_packs", []))
+        active_categories = [
+            cat for cat in ANALYZER_CATEGORIES
+            if "pack" not in cat or cat["pack"] in enabled_packs
+        ]
+
         # Stack index 0: Overview panel
         overview = OverviewPanel()
-        overview.load(result)
+        overview.load(result, active_categories)
         self.panel_stack.addWidget(overview)
 
         # Build analyzer panels (stack indices 1+)
         stack_idx = 1
-        for category in ANALYZER_CATEGORIES:
+        for category in active_categories:
             for analyzer in category["analyzers"]:
                 label, attr, panel_class_or_none = analyzer[0], analyzer[1], analyzer[2]
                 fourth = analyzer[3]
@@ -319,14 +366,14 @@ class Dashboard(QWidget):
                 stack_idx += 1
 
         # Build nav list
-        self._build_nav_list(result)
+        self._build_nav_list(result, active_categories)
 
         # Select overview
         self.nav_list.setCurrentRow(0)
 
         self.stack.setCurrentIndex(1)
 
-    def _build_nav_list(self, result: CaptureResult):
+    def _build_nav_list(self, result: CaptureResult, active_categories: list[dict]):
         nav_row = 0
 
         # Overview item
@@ -339,7 +386,7 @@ class Dashboard(QWidget):
         nav_row += 1
 
         stack_idx = 1
-        for category in ANALYZER_CATEGORIES:
+        for category in active_categories:
             # Category header (non-selectable)
             header_item = QListWidgetItem(category["name"].upper())
             header_item.setFlags(Qt.NoItemFlags)

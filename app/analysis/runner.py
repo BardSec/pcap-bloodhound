@@ -29,7 +29,14 @@ from app.analyzers import (
     analyze_data_staging,
     analyze_suspicious_useragents,
     analyze_powershell_wmi,
+    analyze_pci_compliance,
+    analyze_financial_protocols,
+    analyze_hipaa_compliance,
+    analyze_medical_devices,
+    analyze_ics_scada,
+    analyze_it_ot_segmentation,
 )
+from app.settings import get_enabled_analyzers
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +56,15 @@ ANALYZER_NAMES = [
     # K-12
     ("Content Filter Bypass", "content_filter_bypass"),
     ("CIPA Compliance", "cipa_compliance"),
+    # Financial Services
+    ("PCI DSS Compliance", "pci_compliance"),
+    ("Financial Protocols", "financial_protocols"),
+    # Healthcare
+    ("HIPAA Compliance", "hipaa_compliance"),
+    ("Medical Devices", "medical_devices"),
+    # Energy / Utilities
+    ("ICS/SCADA Protocols", "ics_scada"),
+    ("IT/OT Segmentation", "it_ot_segmentation"),
     # Network visibility
     ("Connection Failures", "connection_failures"),
     ("DNS Health", "dns_health"),
@@ -108,6 +124,12 @@ class AnalysisWorker(QThread):
                 "powershell_wmi": analyze_powershell_wmi,
                 "content_filter_bypass": analyze_content_filter_bypass,
                 "cipa_compliance": analyze_cipa_compliance,
+                "pci_compliance": analyze_pci_compliance,
+                "financial_protocols": analyze_financial_protocols,
+                "hipaa_compliance": analyze_hipaa_compliance,
+                "medical_devices": analyze_medical_devices,
+                "ics_scada": analyze_ics_scada,
+                "it_ot_segmentation": analyze_it_ot_segmentation,
                 "connection_failures": analyze_connection_failures,
                 "dns_health": analyze_dns_health,
                 "tls_inspection": analyze_tls_inspection,
@@ -118,9 +140,20 @@ class AnalysisWorker(QThread):
                 "services": analyze_services,
             }
 
+            enabled = get_enabled_analyzers()
+
             for i, (display_name, attr_name) in enumerate(ANALYZER_NAMES):
                 if attr_name is None:
                     continue  # Skip the "Loading packets" entry
+
+                # Skip industry-specific analyzers that aren't enabled
+                if attr_name in analyzers and attr_name not in enabled and attr_name in (
+                    "content_filter_bypass", "cipa_compliance",
+                    "pci_compliance", "financial_protocols",
+                    "hipaa_compliance", "medical_devices",
+                    "ics_scada", "it_ot_segmentation",
+                ):
+                    continue
 
                 pct = int(((i + 1) / total_steps) * 100)
                 self.progress.emit(f"Analyzing: {display_name}...", pct)
