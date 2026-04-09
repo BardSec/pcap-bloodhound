@@ -1,6 +1,10 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.analysis.findings import Finding, InvestigationThread
+    from app.analysis.metadata import CaptureMetadata
 
 
 @dataclass
@@ -15,6 +19,11 @@ class CaptureResult:
     error: str = ""
     started_at: datetime = field(default_factory=datetime.now)
     completed_at: datetime | None = None
+
+    # Evidence-based findings layer (populated after analyzers run)
+    findings: list = field(default_factory=list)             # list[Finding]
+    investigation_threads: list = field(default_factory=list) # list[InvestigationThread]
+    capture_metadata: Any = None                              # CaptureMetadata
 
     # Threat hunting results
     c2_beaconing: list[dict[str, Any]] = field(default_factory=list)
@@ -33,6 +42,8 @@ class CaptureResult:
     # K-12 specific
     content_filter_bypass: dict[str, Any] = field(default_factory=dict)
     cipa_compliance: dict[str, Any] = field(default_factory=dict)
+    student_data_exposure: dict[str, Any] = field(default_factory=dict)
+    vendor_traffic: dict[str, Any] = field(default_factory=dict)
 
     # Financial Services
     pci_compliance: dict[str, Any] = field(default_factory=dict)
@@ -79,6 +90,9 @@ class CaptureResult:
             "file_size": self.file_size,
             "packet_count": self.packet_count,
             "analyzed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "findings": [f.to_dict() for f in self.findings],
+            "investigation_threads": [t.to_dict() for t in self.investigation_threads],
+            "capture_metadata": self.capture_metadata.to_dict() if self.capture_metadata else None,
             "threat_hunting": {
                 "c2_beaconing": self.c2_beaconing,
                 "dns_tunneling": self.dns_tunneling,
@@ -96,6 +110,8 @@ class CaptureResult:
             "k12_specific": {
                 "content_filter_bypass": self.content_filter_bypass,
                 "cipa_compliance": self.cipa_compliance,
+                "student_data_exposure": self.student_data_exposure,
+                "vendor_traffic": self.vendor_traffic,
             },
             "financial_services": {
                 "pci_compliance": self.pci_compliance,

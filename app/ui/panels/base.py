@@ -1,11 +1,14 @@
 """Shared UI helpers for analyzer panels."""
 
+import re
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QMenu,
     QScrollArea,
     QTableWidget,
     QTableWidgetItem,
@@ -14,6 +17,19 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.theme import COLORS, SEVERITY_COLORS
+
+# Pattern matching IPs and domain-like strings for pivot actions
+_IP_PATTERN = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
+_DOMAIN_PATTERN = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9-]*\.)+[a-zA-Z]{2,}$')
+
+# Global callback for entity investigation pivots — set by Dashboard
+_investigate_callback = None
+
+
+def set_investigate_callback(callback):
+    """Register a global callback for 'Investigate' pivot actions from tables."""
+    global _investigate_callback
+    _investigate_callback = callback
 
 
 def make_card(title: str, value: str, color: str = COLORS["accent"]) -> QWidget:
@@ -154,6 +170,27 @@ def make_table(headers: list[str], rows: list[list[str]], sortable: bool = True)
         dlg.exec()
 
     table.itemDoubleClicked.connect(_on_double_click)
+
+    # Right-click context menu for entity investigation pivots
+    table.setContextMenuPolicy(Qt.CustomContextMenu)
+
+    def _on_context_menu(pos):
+        item = table.itemAt(pos)
+        if not item:
+            return
+        text = item.text().strip()
+        if not (_IP_PATTERN.match(text) or _DOMAIN_PATTERN.match(text)):
+            return
+        if not _investigate_callback:
+            return
+
+        menu = QMenu(table)
+        action = menu.addAction(f"Investigate {text}")
+        chosen = menu.exec(table.viewport().mapToGlobal(pos))
+        if chosen == action:
+            _investigate_callback(text)
+
+    table.customContextMenuRequested.connect(_on_context_menu)
 
     return table
 

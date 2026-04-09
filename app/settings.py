@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 INDUSTRY_PACKS = {
     "k12": {
         "label": "K-12 Education",
-        "description": "CIPA compliance, content filter bypass detection",
-        "analyzers": ["content_filter_bypass", "cipa_compliance"],
+        "description": "CIPA compliance, content filter bypass, student data exposure, vendor traffic",
+        "analyzers": ["content_filter_bypass", "cipa_compliance", "student_data_exposure", "vendor_traffic"],
     },
     "financial": {
         "label": "Financial Services",

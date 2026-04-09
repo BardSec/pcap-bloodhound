@@ -24,6 +24,8 @@ from app.analyzers.hipaa_compliance import analyze_hipaa_compliance
 from app.analyzers.medical_devices import analyze_medical_devices
 from app.analyzers.ics_scada import analyze_ics_scada
 from app.analyzers.it_ot_segmentation import analyze_it_ot_segmentation
+from app.analyzers.student_data_exposure import analyze_student_data_exposure
+from app.analyzers.vendor_traffic import analyze_vendor_traffic
 
 __all__ = [
     "analyze_c2_beaconing",
@@ -52,4 +54,6 @@ __all__ = [
     "analyze_medical_devices",
     "analyze_ics_scada",
     "analyze_it_ot_segmentation",
+    "analyze_student_data_exposure",
+    "analyze_vendor_traffic",
 ]

@@ -27,7 +27,8 @@ from app.ui.panels.ntlm import NtlmPanel
 from app.ui.panels.tls_inspect import TlsInspectPanel
 from app.ui.panels.traffic_timeline import TrafficTimelinePanel
 from app.ui.panels.generic import GenericDictPanel
-from app.ui.panels.base import make_card, make_card_row, make_description_banner, make_section_header
+from app.ui.panels.investigation import InvestigationPanel
+from app.ui.panels.base import make_card, make_card_row, make_description_banner, make_section_header, set_investigate_callback
 from app.ui.theme import COLORS
 from app.settings import load_settings, INDUSTRY_PACKS
 
@@ -84,6 +85,12 @@ ANALYZER_CATEGORIES = [
             ("CIPA Compliance", "cipa_compliance", None, "No web traffic to analyze for CIPA compliance.",
              "Checks whether outbound web traffic passes through a recognized content filter (Lightspeed, GoGuardian, Securly, Cisco Umbrella, etc.). "
              "Unfiltered HTTPS connections from student devices may indicate a CIPA compliance gap."),
+            ("Student Data", "student_data_exposure", None, "No student data exposure detected.",
+             "Scans cleartext traffic for student PII — SSNs, dates of birth, student IDs, and student email patterns. "
+             "Also detects unencrypted SIS/EdTech API traffic (PowerSchool, Infinite Campus, Clever, etc.). Any student data in cleartext is a FERPA concern."),
+            ("Vendor Traffic", "vendor_traffic", None, "No EdTech vendor traffic detected.",
+             "Identifies traffic to known EdTech vendors (SIS, LMS, SSO, assessment platforms) and flags unencrypted connections, "
+             "bulk data exports (>500 KB), and third-party analytics/tracking domains that may be collecting student data without consent."),
         ],
     },
     {
@@ -341,8 +348,16 @@ class Dashboard(QWidget):
         overview.load(result, active_categories)
         self.panel_stack.addWidget(overview)
 
-        # Build analyzer panels (stack indices 1+)
-        stack_idx = 1
+        # Stack index 1: Investigation Threads panel
+        self._investigation_panel = InvestigationPanel()
+        self._investigation_panel.load(result.investigation_threads)
+        self.panel_stack.addWidget(self._investigation_panel)
+
+        # Register global investigate callback for right-click pivots from any table
+        set_investigate_callback(self._pivot_to_entity)
+
+        # Build analyzer panels (stack indices 2+)
+        stack_idx = 2
         for category in active_categories:
             for analyzer in category["analyzers"]:
                 label, attr, panel_class_or_none = analyzer[0], analyzer[1], analyzer[2]
@@ -385,7 +400,18 @@ class Dashboard(QWidget):
         self._nav_to_stack[nav_row] = 0
         nav_row += 1
 
-        stack_idx = 1
+        # Investigation Threads item
+        thread_count = len(result.investigation_threads)
+        thread_label = f"Investigation ({thread_count})" if thread_count else "Investigation"
+        thread_item = QListWidgetItem(thread_label)
+        thread_font = QFont()
+        thread_font.setBold(True)
+        thread_item.setFont(thread_font)
+        self.nav_list.addItem(thread_item)
+        self._nav_to_stack[nav_row] = 1
+        nav_row += 1
+
+        stack_idx = 2
         for category in active_categories:
             # Category header (non-selectable)
             header_item = QListWidgetItem(category["name"].upper())
@@ -413,9 +439,39 @@ class Dashboard(QWidget):
         if row in self._nav_to_stack:
             self.panel_stack.setCurrentIndex(self._nav_to_stack[row])
 
+    def _pivot_to_entity(self, entity: str):
+        """Navigate to the Investigation Threads panel and select the given entity."""
+        if not hasattr(self, "_investigation_panel"):
+            return
+        # Find the nav row that maps to stack index 1 (Investigation panel)
+        inv_nav_row = None
+        for nav_row, stack_idx in self._nav_to_stack.items():
+            if stack_idx == 1:
+                inv_nav_row = nav_row
+                break
+        if inv_nav_row is not None:
+            self.nav_list.setCurrentRow(inv_nav_row)
+        self._investigation_panel.navigate_to_entity(entity)
+
     def _export_json(self):
         if not self._result:
             return
+
+        # Warn if export will contain sensitive credential data
+        has_creds = bool(self._result.cleartext_creds or self._result.ntlm)
+        if has_creds:
+            from PySide6.QtWidgets import QMessageBox
+            reply = QMessageBox.warning(
+                self,
+                "Sensitive Data Warning",
+                "This export will contain captured credentials (passwords and/or "
+                "NTLM hashes) in plaintext.\n\nTreat the exported file as sensitive. "
+                "Continue?",
+                QMessageBox.Yes | QMessageBox.Cancel,
+                QMessageBox.Cancel,
+            )
+            if reply != QMessageBox.Yes:
+                return
 
         base_name = self._result.filename.rsplit(".", 1)[0]
         file_path, _ = QFileDialog.getSaveFileName(

@@ -35,7 +35,12 @@ from app.analyzers import (
     analyze_medical_devices,
     analyze_ics_scada,
     analyze_it_ot_segmentation,
+    analyze_student_data_exposure,
+    analyze_vendor_traffic,
 )
+from app.analysis.finding_builders import build_all_findings
+from app.analysis.metadata import extract_metadata
+from app.analysis.threads import build_threads
 from app.settings import get_enabled_analyzers
 
 logger = logging.getLogger(__name__)
@@ -56,6 +61,8 @@ ANALYZER_NAMES = [
     # K-12
     ("Content Filter Bypass", "content_filter_bypass"),
     ("CIPA Compliance", "cipa_compliance"),
+    ("Student Data Exposure", "student_data_exposure"),
+    ("Vendor Traffic", "vendor_traffic"),
     # Financial Services
     ("PCI DSS Compliance", "pci_compliance"),
     ("Financial Protocols", "financial_protocols"),
@@ -124,6 +131,8 @@ class AnalysisWorker(QThread):
                 "powershell_wmi": analyze_powershell_wmi,
                 "content_filter_bypass": analyze_content_filter_bypass,
                 "cipa_compliance": analyze_cipa_compliance,
+                "student_data_exposure": analyze_student_data_exposure,
+                "vendor_traffic": analyze_vendor_traffic,
                 "pci_compliance": analyze_pci_compliance,
                 "financial_protocols": analyze_financial_protocols,
                 "hipaa_compliance": analyze_hipaa_compliance,
@@ -149,6 +158,7 @@ class AnalysisWorker(QThread):
                 # Skip industry-specific analyzers that aren't enabled
                 if attr_name in analyzers and attr_name not in enabled and attr_name in (
                     "content_filter_bypass", "cipa_compliance",
+                    "student_data_exposure", "vendor_traffic",
                     "pci_compliance", "financial_protocols",
                     "hipaa_compliance", "medical_devices",
                     "ics_scada", "it_ot_segmentation",
@@ -167,6 +177,30 @@ class AnalysisWorker(QThread):
                     setattr(result, attr_name, [] if attr_name in (
                         "c2_beaconing", "ntlm", "cleartext_creds", "exfiltration"
                     ) else {})
+
+            # ── Post-processing: metadata, findings, investigation threads ──
+            self.progress.emit("Extracting metadata...", 92)
+            try:
+                meta = extract_metadata(packets)
+                result.capture_metadata = meta
+            except Exception as e:
+                logger.warning(f"Metadata extraction failed: {e}")
+                meta = None
+
+            if meta:
+                self.progress.emit("Building findings...", 95)
+                try:
+                    result.findings = build_all_findings(result, meta)
+                except Exception as e:
+                    logger.warning(f"Finding builder failed: {e}")
+
+                self.progress.emit("Building investigation threads...", 98)
+                try:
+                    result.investigation_threads = build_threads(
+                        result.findings, result, meta,
+                    )
+                except Exception as e:
+                    logger.warning(f"Thread builder failed: {e}")
 
             result.status = "complete"
             result.completed_at = datetime.now()
