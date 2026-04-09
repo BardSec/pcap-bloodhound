@@ -3,7 +3,7 @@ import os
 import sys
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices, QPixmap
+from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -34,6 +34,11 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1280, 800)
         self.resize(1440, 900)
 
+        # Set window icon from logo
+        icon_path = self._resource_path("app/resources/logo.png")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+
         self.captures: list[CaptureResult] = []
         self.current_worker: AnalysisWorker | None = None
 
@@ -58,17 +63,22 @@ class MainWindow(QMainWindow):
 
         # Logo
         logo_container = QWidget()
-        logo_container.setStyleSheet(f"background-color: {COLORS['bg_card']}; padding: 16px;")
+        logo_container.setStyleSheet(f"background-color: {COLORS['bg_card']}; padding: 8px;")
         logo_layout = QVBoxLayout(logo_container)
-        logo_layout.setContentsMargins(16, 16, 16, 16)
+        logo_layout.setContentsMargins(12, 12, 12, 12)
+        logo_layout.setAlignment(Qt.AlignCenter)
 
-        logo = QLabel("PCAP Detective")
-        logo.setStyleSheet("font-size: 16px; font-weight: 700; color: white;")
-        logo_layout.addWidget(logo)
-
-        subtitle = QLabel("Desktop Threat Hunter")
-        subtitle.setStyleSheet(f"font-size: 11px; color: {COLORS['text_muted']};")
-        logo_layout.addWidget(subtitle)
+        logo_label = QLabel()
+        logo_path = self._resource_path("app/resources/logo.png")
+        if os.path.exists(logo_path):
+            pixmap = QPixmap(logo_path)
+            logo_label.setPixmap(pixmap.scaledToWidth(230, Qt.SmoothTransformation))
+        else:
+            logo_label.setText("PCAP Detective")
+            logo_label.setStyleSheet("font-size: 16px; font-weight: 700; color: white;")
+        logo_label.setAlignment(Qt.AlignCenter)
+        logo_label.setStyleSheet("border: none;")
+        logo_layout.addWidget(logo_label)
 
         sidebar_layout.addWidget(logo_container)
 
@@ -147,23 +157,13 @@ class MainWindow(QMainWindow):
         self.capture_list.currentRowChanged.connect(self._on_capture_selected)
         sidebar_layout.addWidget(self.capture_list, 1)
 
-        # Footer with logo and copyright
+        # Footer with branding
         footer = QWidget()
         footer.setStyleSheet(f"background-color: {COLORS['bg_card']}; border-top: 1px solid {COLORS['border']};")
         footer_layout = QVBoxLayout(footer)
         footer_layout.setContentsMargins(12, 10, 12, 10)
         footer_layout.setSpacing(4)
         footer_layout.setAlignment(Qt.AlignCenter)
-
-        # Logo — small and subtle
-        logo_label = QLabel()
-        logo_path = self._resource_path("app/resources/logo.png")
-        if os.path.exists(logo_path):
-            pixmap = QPixmap(logo_path)
-            logo_label.setPixmap(pixmap.scaledToHeight(32, Qt.SmoothTransformation))
-        logo_label.setAlignment(Qt.AlignCenter)
-        logo_label.setStyleSheet("border: none;")
-        footer_layout.addWidget(logo_label)
 
         # Website link
         link = QLabel(f'<a href="https://bardsec.com" style="color: {COLORS["text_muted"]}; font-size: 10px; text-decoration: none;">bardsec.com</a>')

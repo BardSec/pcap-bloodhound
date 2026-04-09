@@ -5,6 +5,7 @@ import logging
 import os
 import plistlib
 import platform
+import shlex
 import subprocess
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ def install_bpf_helper() -> tuple[bool, str]:
     if not is_macos():
         return False, "BPF helper is only supported on macOS"
 
-    username = os.getlogin()
+    username = shlex.quote(os.getlogin())
 
     # Shell script that sets BPF permissions at boot
     script_content = f"""#!/bin/bash

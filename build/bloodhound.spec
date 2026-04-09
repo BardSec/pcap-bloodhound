@@ -67,7 +67,7 @@ if sys.platform == 'darwin':
         info_plist={
             'CFBundleName': 'PCAP Detective',
             'CFBundleDisplayName': 'PCAP Detective',
-            'CFBundleShortVersionString': '1.5.0',
+            'CFBundleShortVersionString': '2.1.0',
             'NSHighResolutionCapable': True,
             'LSMinimumSystemVersion': '12.0',
             'NSHumanReadableCopyright': 'Copyright \u00a9 2026 BardSec',

@@ -12,3 +12,20 @@ build/output/
 *.spec.bak
 .DS_Store
 *.log
+
+# Secrets and credentials
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account.json
+
+# Session tracking (gitignored globally, belt-and-suspenders)
+sessions.md
+wins.md
+
+# Security review output
+security-review.md
