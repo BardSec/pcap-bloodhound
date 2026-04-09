@@ -2,6 +2,8 @@
 
 A desktop threat-hunting tool that analyzes Wireshark packet captures with interactive visual dashboards. No command-line expertise required.
 
+![PCAP Detective](assets/pcap-ss.png)
+
 ## Install
 
 **macOS (Homebrew):**
