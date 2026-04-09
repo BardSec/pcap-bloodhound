@@ -157,6 +157,19 @@ class MainWindow(QMainWindow):
         self.capture_list.currentRowChanged.connect(self._on_capture_selected)
         sidebar_layout.addWidget(self.capture_list, 1)
 
+        # Sample data link
+        sample_link = QLabel("Try a sample investigation")
+        sample_link.setAlignment(Qt.AlignCenter)
+        sample_link.setCursor(Qt.PointingHandCursor)
+        sample_link.setStyleSheet(f"""
+            color: {COLORS['accent']};
+            font-size: 11px;
+            padding: 8px 12px;
+            border-top: 1px solid {COLORS['border']};
+        """)
+        sample_link.mousePressEvent = lambda _: self._load_sample_capture()
+        sidebar_layout.addWidget(sample_link)
+
         # Footer with branding
         footer = QWidget()
         footer.setStyleSheet(f"background-color: {COLORS['bg_card']}; border-top: 1px solid {COLORS['border']};")
@@ -292,6 +305,25 @@ class MainWindow(QMainWindow):
         dialog = CaptureDialog(self)
         if dialog.exec() and dialog.result_path:
             self._start_analysis(dialog.result_path)
+
+    def _load_sample_capture(self):
+        """Load the bundled sample PCAP for a test investigation."""
+        if self.current_worker and self.current_worker.isRunning():
+            QMessageBox.warning(
+                self, "Analysis Running",
+                "Please wait for the current analysis to complete."
+            )
+            return
+
+        sample_path = self._resource_path("app/resources/sample_capture.pcap")
+        if not os.path.exists(sample_path):
+            QMessageBox.warning(
+                self, "Sample Not Found",
+                "The sample capture file was not found."
+            )
+            return
+
+        self._start_analysis(sample_path)
 
     def _on_capture_selected(self, row: int):
         if 0 <= row < len(self.captures):
